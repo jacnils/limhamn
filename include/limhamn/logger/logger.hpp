@@ -118,7 +118,7 @@ namespace limhamn::logger {
              * @param  data: std::string containing the data to log.
              * @return logger_return struct containing the return values of the logger.
              */
-            [[nodiscard]] logger_return write_to_log(logger_error_type type, const std::string& data) const noexcept; // NOLINT
+            logger_return write_to_log(logger_error_type type, const std::string& data) const noexcept; // NOLINT
             /**
              * @brief  Overrides the properties of the logger.
              * @param  prop: logger_properties struct containing the settings for the logger.

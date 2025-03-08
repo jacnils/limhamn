@@ -13,6 +13,7 @@
 #include <openssl/evp.h>
 #include <boost/system/detail/error_code.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #define LIMHAMN_SMTP_CLIENT
 

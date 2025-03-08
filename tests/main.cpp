@@ -11,14 +11,16 @@
 #define LIMHAMN_DATABASE_IMPL
 #define LIMHAMN_HTTP_CLIENT_IMPL
 #define LIMHAMN_HTTP_SERVER_IMPL
+#define LIMHAMN_HTTP_UTILS_IMPL
 #define LIMHAMN_INI_PARSER_IMPL
 #define LIMHAMN_LOGGER_IMPL
 #define LIMHAMN_SMTP_CLIENT_IMPL
 
 #include <limhamn/argument_manager/argument_manager.hpp>
-#include <limhamn/database/database_manager.hpp>
+#include <limhamn/database/database.hpp>
 #include <limhamn/http/http_server.hpp>
 #include <limhamn/http/http_client.hpp>
+#include <limhamn/http/http_utils.hpp>
 #include <limhamn/ini/ini_parser.hpp>
 #include <limhamn/logger/logger.hpp>
 #include <limhamn/smtp/smtp_client.hpp>

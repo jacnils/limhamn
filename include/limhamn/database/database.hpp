@@ -386,7 +386,7 @@ inline void limhamn::database::sqlite3_database::bind_parameters(sqlite3_stmt* s
 
 
 inline void limhamn::database::sqlite3_database::bind_parameters(sqlite3_stmt* stmt, int index) {}
-inline void bind_parameter(sqlite3_stmt* stmt, int index, int value) {
+inline void limhamn::database::sqlite3_database::bind_parameter(sqlite3_stmt* stmt, int index, int value) {
 #ifdef SDB_ENABLE_PRINTDEBUG
     std::cerr << "Binding int: " << value << " to index: " << index << "\n";
 #endif
@@ -422,7 +422,7 @@ inline void limhamn::database::sqlite3_database::bind_parameter(sqlite3_stmt* st
 }
 
 inline int limhamn::database::sqlite3_database::callback(void* data, int argc, char** argv, char** name) {
-    static_cast<void*>(data);
+    static_cast<void>(static_cast<void*>(data));
 
     std::unordered_map<std::string, std::string> map{};
     for (int i{0}; i < argc; i++) {
@@ -554,7 +554,6 @@ inline std::int64_t limhamn::database::sqlite3_database::get_last_insertion() co
 
 template <typename... Args>
 inline bool limhamn::database::sqlite3_database::exec(const std::string& query, Args... args) {
-    static_assert(sizeof...(args) > 0, "exec() requires more parameters");
     sqlite3_stmt* stmt;
 
     std::string nq{};
@@ -587,7 +586,6 @@ inline bool limhamn::database::sqlite3_database::exec(const std::string& query, 
 }
 template <typename... Args>
 std::vector<std::unordered_map<std::string, std::string>> limhamn::database::sqlite3_database::query(const std::string& query, Args... args) {
-    static_assert(sizeof...(args) > 0, "query() requires more parameters");
     if (!this->is_good) {
         return {};
     }
@@ -799,7 +797,6 @@ inline std::string limhamn::database::postgresql_database::to_string(const T& va
 
 template <typename... Args>
 inline bool limhamn::database::postgresql_database::exec(const std::string& query, Args... args) {
-    static_assert(sizeof...(args) > 0, "exec() requires more parameters");
     if (!this->is_good) {
         return false;
     }
@@ -837,7 +834,6 @@ inline bool limhamn::database::postgresql_database::exec(const std::string& quer
 
 template <typename... Args>
 inline std::vector<std::unordered_map<std::string, std::string>> limhamn::database::postgresql_database::query(const std::string& query, Args... args) {
-    static_assert(sizeof...(args) > 0, "query() requires more parameters");
     if (!this->is_good) {
         return {};
     }
