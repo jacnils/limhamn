@@ -34,7 +34,7 @@ namespace limhamn::http::utils {
             std::string host{};
             std::string endpoint{};
             std::string query{};
-            protocol protocol{protocol::http};
+            protocol prefix{protocol::http};
             int port{80};
 
             /**
@@ -653,9 +653,9 @@ inline void limhamn::http::utils::url::parse_url_from_string(const std::string& 
     std::size_t pos{url.find("https://")};
 
     if (pos == std::string::npos) {
-        this->protocol = limhamn::http::utils::protocol::http;
+        this->prefix = limhamn::http::utils::protocol::http;
     } else {
-        this->protocol = limhamn::http::utils::protocol::https;
+        this->prefix = limhamn::http::utils::protocol::https;
     }
 
     pos = url.find(":");
@@ -674,7 +674,7 @@ inline void limhamn::http::utils::url::parse_url_from_string(const std::string& 
     } else {
         std::size_t pos2{url.find("/")};
         this->host = url.substr(0, pos2);
-        this->port = this->protocol == limhamn::http::utils::protocol::http ? 80 : 443;
+        this->port = this->prefix == limhamn::http::utils::protocol::http ? 80 : 443;
         url = url.substr(pos2);
     }
 
@@ -691,14 +691,14 @@ inline void limhamn::http::utils::url::parse_url_from_string(const std::string& 
 inline std::string limhamn::http::utils::url::assemble_url_from_parts() const {
     std::string ret{};
 
-    if (protocol == limhamn::http::utils::protocol::https) {
+    if (prefix == limhamn::http::utils::protocol::https) {
         ret += "https://" + host;
     } else {
         ret += "http://" + host; //NOLINT
     }
 
-    if (!(protocol == limhamn::http::utils::protocol::https && port == 443) &&
-        !(protocol == limhamn::http::utils::protocol::http && port == 80)) {
+    if (!(prefix == limhamn::http::utils::protocol::https && port == 443) &&
+        !(prefix == limhamn::http::utils::protocol::http && port == 80)) {
         ret += ":" + std::to_string(port);
         }
 

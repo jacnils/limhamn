@@ -49,6 +49,9 @@ namespace limhamn::http::server {
         std::string data{};
     };
 
+    /**
+     * @brief  An enum class that represents the type of redirect.
+     */
     enum class redirect_type {
         permanent,
         temporary,
@@ -101,7 +104,7 @@ namespace limhamn::http::server {
         std::vector<std::string> delete_cookies{};
         std::unordered_map<std::string, std::string> session{};
         std::string location{};
-        redirect_type redirect_type{redirect_type::temporary};
+        redirect_type redirect_status{redirect_type::temporary};
         std::vector<header> headers{};
     };
 
@@ -512,9 +515,9 @@ namespace _limhamn_http_server_impl {
                     }
 
                     if (!response.location.empty()) {
-                        if (response.redirect_type == limhamn::http::server::redirect_type::temporary) {
+                        if (response.redirect_status == limhamn::http::server::redirect_type::temporary) {
                             net_response.result(boost::beast::http::status::temporary_redirect);
-                        } else if (response.redirect_type == limhamn::http::server::redirect_type::permanent) {
+                        } else if (response.redirect_status == limhamn::http::server::redirect_type::permanent) {
                             net_response.result(boost::beast::http::status::moved_permanently);
                         }
                         net_response.set(boost::beast::http::field::location, response.location);
