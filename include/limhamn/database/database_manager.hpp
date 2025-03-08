@@ -92,7 +92,7 @@ namespace limhamn::database_manager {
              * @param stmt Statement to bind to.
              * @param index Index of the parameter.
              */
-            void bind_parameters(sqlite3_stmt* stmt, int index);
+            static void bind_parameters(sqlite3_stmt* stmt, int index);
             /**
              * @brief Bind a parameter to a prepared statement.
              *
@@ -100,7 +100,7 @@ namespace limhamn::database_manager {
              * @param index Index of the parameter.
              * @param value Value to bind.
              */
-            void bind_parameter(sqlite3_stmt* stmt, int index, int value);
+            static void bind_parameter(sqlite3_stmt* stmt, int index, int value);
             /**
              * @brief Bind a parameter to a prepared statement.
              *
@@ -108,7 +108,7 @@ namespace limhamn::database_manager {
              * @param index Index of the parameter.
              * @param value Value to bind.
              */
-            void bind_parameter(sqlite3_stmt* stmt, int index, int64_t value);
+            static void bind_parameter(sqlite3_stmt* stmt, int index, int64_t value);
             /**
              * @brief Bind a parameter to a prepared statement.
              *
@@ -116,7 +116,7 @@ namespace limhamn::database_manager {
              * @param index Index of the parameter.
              * @param value Value to bind.
              */
-            void bind_parameter(sqlite3_stmt* stmt, int index, double value);
+            static void bind_parameter(sqlite3_stmt* stmt, int index, double value);
             /**
              * @brief Bind a parameter to a prepared statement.
              *
@@ -124,7 +124,7 @@ namespace limhamn::database_manager {
              * @param index Index of the parameter.
              * @param value Value to bind.
              */
-            void bind_parameter(sqlite3_stmt* stmt, int index, const std::string& value);
+            static void bind_parameter(sqlite3_stmt* stmt, int index, const std::string& value);
             /**
              * @brief Bind a parameter to a prepared statement.
              *
@@ -132,7 +132,7 @@ namespace limhamn::database_manager {
              * @param index Index of the parameter.
              * @param value Value to bind.
              */
-            void bind_parameter(sqlite3_stmt* stmt, int index, const char* value);
+            static void bind_parameter(sqlite3_stmt* stmt, int index, const char* value);
         public:
             /**
              * @brief Query the database, returning data.
@@ -155,23 +155,23 @@ namespace limhamn::database_manager {
              * @param query Query to execute.
              * @return std::vector<std::unordered_map<std::string, std::string>> Data.
              */
-            std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query);
+            [[nodiscard]] std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query) const;
             /**
              * @brief Execute an SQL command.
              * @param query Query to execute.
              * @return bool True if successful.
              */
-            bool exec(const std::string& query);
+            [[nodiscard]] bool exec(const std::string& query) const;
             /**
              * @brief Check if the database is good.
              * @return bool True if good.
              */
-            bool good();
+            [[nodiscard]] bool good() const;
             /**
              * @brief Check if the database is open.
              * @return bool True if open.
              */
-            bool is_open();
+            [[nodiscard]] bool is_open() const;
             /**
              * @brief Open a database from file.
              * @param database Database to open.
@@ -185,18 +185,18 @@ namespace limhamn::database_manager {
              * @brief Check if the database is empty.
              * @return bool
              */
-            bool empty();
+            [[nodiscard]] bool empty() const;
             /**
              * @brief Validate an SQL statement.
              * @param query Query to validate.
              * @return bool True if valid.
              */
-            bool validate(const std::string& query);
+            [[nodiscard]] bool validate(const std::string& query) const;
             /**
              * @brief Get the last insertion.
              * @return std::int64_t Last insertion.
              */
-            std::int64_t get_last_insertion();
+            [[nodiscard]] std::int64_t get_last_insertion() const;
             /**
              * @brief Constructor.
              */
@@ -205,7 +205,7 @@ namespace limhamn::database_manager {
              * @brief Constructor.
              * @param database Database to open.
              */
-            sqlite3_database(const std::string& database);
+            explicit sqlite3_database(const std::string& database);
             /**
              * @brief Destructor.
              */
@@ -232,15 +232,7 @@ namespace limhamn::database_manager {
              * @return std::string String.
              */
             template <typename T>
-            std::string to_string(const T& value) {
-                if constexpr (std::is_same_v<T, std::string>) {
-                    return value;
-                } else if constexpr (std::is_same_v<T, const char*>) {
-                    return std::string(value);
-                } else {
-                    return std::to_string(value);
-                }
-            }
+            std::string to_string(const T& value);
         public:
             /**
              * @brief Query the database, returning data.
@@ -249,108 +241,93 @@ namespace limhamn::database_manager {
              * @return std::vector<std::unordered_map<std::string, std::string>> Data.
              */
             template <typename... Args>
-            bool exec(const std::string& query, Args... args) {
-                static_assert(sizeof...(args) > 0, "exec() requires more parameters");
-                if (!this->is_good) {
-                    return false;
-                }
+            bool exec(const std::string& query, Args... args);
 
-                int i{1};
-                std::string nq{};
-                for (char ch : query) {
-                    if (ch == '?') {
-                        nq += "$" + std::to_string(i++);
-                    } else {
-                        nq += ch;
-                    }
-                }
-
-                std::vector<std::string> str{remove_non_utf8(to_string(args))...};
-                std::vector<const char*> param_v{};
-                for (const std::string& s : str) {
-#ifdef SDB_ENABLE_PRINTDEBUG
-                    std::cerr << "Binding string: " << s << "\n";
-#endif
-                    param_v.push_back(s.c_str());
-                }
-
-                PGresult* res = PQexecParams(pg_conn, nq.c_str(), param_v.size(), nullptr, param_v.data(), nullptr, nullptr, 0);
-
-                if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-                    PQclear(res);
-                    return false;
-                }
-
-                PQclear(res);
-                return true;
-            }
-
+            /**
+             * @brief Query the database, returning data.
+             * @param query Query to execute.
+             * @param args Arguments.
+             * @return std::vector<std::unordered_map<std::string, std::string>> Data.
+             */
             template <typename... Args>
-            std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query, Args... args) {
-                static_assert(sizeof...(args) > 0, "query() requires more parameters");
-                if (!this->is_good) {
-                    return {};
-                }
-
-                int n{1};
-                std::string nq{};
-                for (char ch : query) {
-                    if (ch == '?') {
-                        nq += "$" + std::to_string(n++);
-                    } else {
-                        nq += ch;
-                    }
-                }
-
-                std::vector<std::string> str{to_string(args)...};
-                std::vector<const char*> param_v{};
-                for (const std::string& s : str) {
-                    param_v.push_back(s.c_str());
-                }
-
-                PGresult* res = PQexecParams(pg_conn, nq.c_str(), param_v.size(), nullptr, param_v.data(), nullptr, nullptr, 0);
-
-                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    PQclear(res);
-                    return {};
-                }
-
-                std::vector<std::unordered_map<std::string, std::string>> result;
-                int nrows = PQntuples(res);
-                int nfields = PQnfields(res);
-
-                for (int i = 0; i < nrows; ++i) {
-                    std::unordered_map<std::string, std::string> row;
-                    for (int j = 0; j < nfields; ++j) {
-                        row[PQfname(res, j)] = PQgetvalue(res, i, j);
-                    }
-                    result.push_back(std::move(row));
-                }
-
-                PQclear(res);
-                return result;
-            }
-            std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query);
-            bool exec(const std::string& query);
-            bool good();
-            bool is_open();
+            std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query, Args... args);
+            /**
+             * @brief Query the database, returning data.
+             * @param query Query to execute.
+             * @return std::vector<std::unordered_map<std::string, std::string>> Data.
+             */
+            [[nodiscard]] std::vector<std::unordered_map<std::string, std::string>> query(const std::string& query) const;
+            /**
+             * @brief Execute an SQL command.
+             * @param query Query to execute.
+             * @return bool True if successful.
+             */
+            [[nodiscard]] bool exec(const std::string& query) const;
+            /**
+             * @brief Check if the database is good.
+             * @return bool True if good.
+             */
+            [[nodiscard]] bool good() const;
+            /**
+             * @brief Check if the database is open.
+             * @return bool True if open.
+             */
+            [[nodiscard]] bool is_open() const;
+            /**
+             * @brief Open a database from file.
+             * @param host Host.
+             * @param user User.
+             * @param password Password.
+             * @param database Database.
+             * @param port Port.
+             */
             void open(const std::string& host, const std::string& user, const std::string& password, const std::string& database, int port=5432);
+            /**
+             * @brief Close the open database.
+             */
             void close();
-            bool empty();
-            bool validate(const std::string& query);
-            std::int64_t get_last_insertion();
+            /**
+             * @brief Check if the database is empty.
+             * @return bool
+             */
+            [[nodiscard]] bool empty() const;
+            /**
+             * @brief Validate an SQL statement.
+             * @param query Query to validate.
+             * @return bool True if valid.
+             */
+            [[nodiscard]] bool validate(const std::string& query) const;
+            /**
+             * @brief Get the last insertion.
+             * @return std::int64_t Last insertion.
+             */
+            [[nodiscard]] std::int64_t get_last_insertion() const;
+            /**
+             * @brief Constructor.
+             */
             postgresql_database() = default;
+            /**
+             * @brief Constructor.
+             * @param host Host.
+             * @param user User.
+             * @param password Password.
+             * @param database Database.
+             * @param port Port.
+             */
             postgresql_database(const std::string& host, const std::string& user, const std::string& password, const std::string& database, int port=5432);
+            /**
+             * @brief Destructor.
+             */
             ~postgresql_database();
     };
 #endif
 }
 
 #ifdef LIMHAMN_DATABASE_IMPL
-std::string limhamn::database_manager::remove_non_utf8(const std::string& input) {
+inline std::string limhamn::database_manager::remove_non_utf8(const std::string& input) {
 #ifdef LIMHAMN_DATABASE_ICONV
     iconv_t cd = iconv_open("UTF-8//IGNORE", "UTF-8");
-    if (cd == (iconv_t)-1) {
+    if (cd == reinterpret_cast<iconv_t>(-1)) {
         throw std::runtime_error("iconv_open failed");
     }
 
@@ -362,7 +339,7 @@ std::string limhamn::database_manager::remove_non_utf8(const std::string& input)
 
     while (inbytesleft > 0) {
         size_t result = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-        if (result == (size_t)-1) {
+        if (result == static_cast<size_t>(-1)) {
             if (errno == EILSEQ || errno == EINVAL) {
                 ++inbuf;
                 --inbytesleft;
@@ -379,7 +356,7 @@ std::string limhamn::database_manager::remove_non_utf8(const std::string& input)
     }
 
     iconv_close(cd);
-    return std::string(output.data(), output.size() - outbytesleft);
+    return {output.data(), output.size() - outbytesleft};
 #else
     return input;
 #endif
@@ -396,17 +373,14 @@ std::string limhamn::database_manager::remove_non_utf8(const std::string& input)
  */
 template<typename T, typename... Args>
 inline void limhamn::database_manager::sqlite3_database::bind_parameters(sqlite3_stmt* stmt, int index, T value, Args... args) {
-    if constexpr (std::is_same_v<T, int>) {
-        bind_parameter(stmt, index, value);
-    } else if constexpr (std::is_same_v<T, int64_t>) {
-        bind_parameter(stmt, index, value);
-    } else if constexpr (std::is_same_v<T, double>) {
-        bind_parameter(stmt, index, value);
-    } else if constexpr (std::is_same_v<T, std::string>) {
-        bind_parameter(stmt, index, value);
-    } else if constexpr (std::is_same_v<T, const char*>) {
+    if constexpr (std::is_same_v<T, int> ||
+                  std::is_same_v<T, int64_t> ||
+                  std::is_same_v<T, double> ||
+                  std::is_same_v<T, std::string> ||
+                  std::is_same_v<T, const char*>) {
         bind_parameter(stmt, index, value);
     }
+
     bind_parameters(stmt, index + 1, args...);
 }
 
@@ -448,7 +422,7 @@ inline void limhamn::database_manager::sqlite3_database::bind_parameter(sqlite3_
 }
 
 inline int limhamn::database_manager::sqlite3_database::callback(void* data, int argc, char** argv, char** name) {
-    static_cast<void>(data);
+    static_cast<void*>(data);
 
     std::unordered_map<std::string, std::string> map{};
     for (int i{0}; i < argc; i++) {
@@ -485,7 +459,7 @@ inline void limhamn::database_manager::sqlite3_database::open(const std::string&
     this->is_good = true;
 }
 
-inline bool limhamn::database_manager::sqlite3_database::exec(const std::string& query) {
+inline bool limhamn::database_manager::sqlite3_database::exec(const std::string& query) const {
     if (!this->is_good) {
         return false;
     }
@@ -506,7 +480,7 @@ inline bool limhamn::database_manager::sqlite3_database::exec(const std::string&
     return true;
 }
 
-inline bool limhamn::database_manager::sqlite3_database::validate(const std::string& query) {
+inline bool limhamn::database_manager::sqlite3_database::validate(const std::string& query) const {
     if (!this->is_good) {
         return false;
     }
@@ -524,7 +498,7 @@ inline bool limhamn::database_manager::sqlite3_database::validate(const std::str
     return true;
 }
 
-inline std::vector<std::unordered_map<std::string, std::string>> limhamn::database_manager::sqlite3_database::query(const std::string& query) {
+inline std::vector<std::unordered_map<std::string, std::string>> limhamn::database_manager::sqlite3_database::query(const std::string& query) const {
     if (!this->is_good) {
         return {};
     }
@@ -545,11 +519,11 @@ inline std::vector<std::unordered_map<std::string, std::string>> limhamn::databa
     return std::move(tmp);
 }
 
-inline bool limhamn::database_manager::sqlite3_database::good() {
+inline bool limhamn::database_manager::sqlite3_database::good() const {
     return this->is_good;
 }
 
-inline bool limhamn::database_manager::sqlite3_database::is_open() {
+inline bool limhamn::database_manager::sqlite3_database::is_open() const {
     return this->good();
 }
 
@@ -560,7 +534,7 @@ inline void limhamn::database_manager::sqlite3_database::close() {
     }
 }
 
-inline bool limhamn::database_manager::sqlite3_database::empty() {
+inline bool limhamn::database_manager::sqlite3_database::empty() const {
     return std::ifstream(this->database).peek() == std::ifstream::traits_type::eof();
 }
 
@@ -570,7 +544,7 @@ inline limhamn::database_manager::sqlite3_database::~sqlite3_database() {
     }
 }
 
-inline std::int64_t limhamn::database_manager::sqlite3_database::get_last_insertion() {
+inline std::int64_t limhamn::database_manager::sqlite3_database::get_last_insertion() const {
     if (!this->is_good) {
         return -1;
     }
@@ -638,8 +612,7 @@ std::vector<std::unordered_map<std::string, std::string>> limhamn::database_mana
     bind_parameters(stmt, 1, args...);
 
     std::vector<std::unordered_map<std::string, std::string>> result;
-    int status;
-    while ((status = sqlite3_step(stmt)) == SQLITE_ROW) {
+    while ((sqlite3_step(stmt)) == SQLITE_ROW) {
         std::unordered_map<std::string, std::string> row;
         for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
             row[sqlite3_column_name(stmt, i)] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
@@ -690,7 +663,7 @@ inline void limhamn::database_manager::postgresql_database::open(const std::stri
     this->is_good = true;
 }
 
-inline bool limhamn::database_manager::postgresql_database::exec(const std::string& query) {
+inline bool limhamn::database_manager::postgresql_database::exec(const std::string& query) const {
     if (!this->is_good) {
         return false;
     }
@@ -714,7 +687,7 @@ inline bool limhamn::database_manager::postgresql_database::exec(const std::stri
     return true;
 }
 
-inline bool limhamn::database_manager::postgresql_database::validate(const std::string& query) {
+inline bool limhamn::database_manager::postgresql_database::validate(const std::string& query) const {
     if (!this->is_good) {
         return false;
     }
@@ -730,7 +703,7 @@ inline bool limhamn::database_manager::postgresql_database::validate(const std::
     return true;
 }
 
-inline std::vector<std::unordered_map<std::string, std::string>> limhamn::database_manager::postgresql_database::query(const std::string& query) {
+inline std::vector<std::unordered_map<std::string, std::string>> limhamn::database_manager::postgresql_database::query(const std::string& query) const {
     if (!this->is_good) {
         return {};
     }
@@ -762,11 +735,11 @@ inline std::vector<std::unordered_map<std::string, std::string>> limhamn::databa
     return result;
 }
 
-inline bool limhamn::database_manager::postgresql_database::good() {
+inline bool limhamn::database_manager::postgresql_database::good() const {
     return this->is_good;
 }
 
-inline bool limhamn::database_manager::postgresql_database::is_open() {
+inline bool limhamn::database_manager::postgresql_database::is_open() const {
     return this->good();
 }
 
@@ -777,7 +750,7 @@ inline void limhamn::database_manager::postgresql_database::close() {
     }
 }
 
-inline bool limhamn::database_manager::postgresql_database::empty() {
+inline bool limhamn::database_manager::postgresql_database::empty() const {
     if (!this->is_good) {
         return true;
     }
@@ -795,7 +768,7 @@ inline bool limhamn::database_manager::postgresql_database::empty() {
     return is_empty;
 }
 
-inline std::int64_t limhamn::database_manager::postgresql_database::get_last_insertion() {
+inline std::int64_t limhamn::database_manager::postgresql_database::get_last_insertion() const {
     if (!this->is_good) {
         return -1;
     }
@@ -814,7 +787,7 @@ inline std::int64_t limhamn::database_manager::postgresql_database::get_last_ins
 }
 
 template <typename T>
-inline std::string limhamn::postgresql_database::to_string(const T& value) {
+inline std::string limhamn::database_manager::postgresql_database::to_string(const T& value) {
     if constexpr (std::is_same_v<T, std::string>) {
         return value;
     } else if constexpr (std::is_same_v<T, const char*>) {
@@ -825,7 +798,7 @@ inline std::string limhamn::postgresql_database::to_string(const T& value) {
 }
 
 template <typename... Args>
-inline bool limhamn::postgresql_database::exec(const std::string& query, Args... args) {
+inline bool limhamn::database_manager::postgresql_database::exec(const std::string& query, Args... args) {
     static_assert(sizeof...(args) > 0, "exec() requires more parameters");
     if (!this->is_good) {
         return false;
@@ -843,6 +816,7 @@ inline bool limhamn::postgresql_database::exec(const std::string& query, Args...
 
     std::vector<std::string> str{remove_non_utf8(to_string(args))...};
     std::vector<const char*> param_v{};
+    param_v.reserve(str.size());
     for (const std::string& s : str) {
 #ifdef SDB_ENABLE_PRINTDEBUG
         std::cerr << "Binding string: " << s << "\n";
@@ -850,7 +824,7 @@ inline bool limhamn::postgresql_database::exec(const std::string& query, Args...
         param_v.push_back(s.c_str());
     }
 
-    PGresult* res = PQexecParams(pg_conn, nq.c_str(), param_v.size(), nullptr, param_v.data(), nullptr, nullptr, 0);
+    PGresult* res = PQexecParams(pg_conn, nq.c_str(), static_cast<int>(param_v.size()), nullptr, param_v.data(), nullptr, nullptr, 0);
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PQclear(res);
@@ -880,11 +854,12 @@ inline std::vector<std::unordered_map<std::string, std::string>> limhamn::databa
 
     std::vector<std::string> str{to_string(args)...};
     std::vector<const char*> param_v{};
+    param_v.reserve(str.size());
     for (const std::string& s : str) {
         param_v.push_back(s.c_str());
     }
 
-    PGresult* res = PQexecParams(pg_conn, nq.c_str(), param_v.size(), nullptr, param_v.data(), nullptr, nullptr, 0);
+    PGresult* res = PQexecParams(pg_conn, nq.c_str(), static_cast<int>(param_v.size()), nullptr, param_v.data(), nullptr, nullptr, 0);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PQclear(res);

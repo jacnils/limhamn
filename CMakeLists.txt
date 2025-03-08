@@ -11,6 +11,8 @@ if (NOT DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+find_package(PostgreSQL REQUIRED)
+find_package(SQLite3 REQUIRED)
 find_package(Boost REQUIRED CONFIG COMPONENTS system)
 find_package(OpenSSL REQUIRED)
 
@@ -23,7 +25,13 @@ set(PROJECT_SOURCE_FILES
 
 add_executable(limhamn_test ${PROJECT_SOURCE_FILES})
 
-target_link_libraries(limhamn_test Boost::system OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(limhamn_test
+        Boost::system
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        PostgreSQL::PostgreSQL
+        SQLite::SQLite3
+)
 
 enable_testing()
 add_test(NAME limhamn_test COMMAND limhamn_test)
