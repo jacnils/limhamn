@@ -55,9 +55,9 @@ Then, include the headers you need in your project.
   - Prerequisites: `#define LIMHAMN_INI_PARSER_IMPL` (for implementation)
   - C++ version: C++17(?)
   - File version: 0.1.0
-- `limhamn/database/database_manager.hpp`: Simple database manager for C++ projects.
+- `limhamn/database/database.hpp`: Simple database manager for C++ projects.
   - Dependencies: SQLite3 and/or PostgreSQL and iconv (optional but strongly recommended)
-  - Usage: `#include "limhamn/database/database_manager.hpp"`
+  - Usage: `#include "limhamn/database/database.hpp"`
   - Prerequisites: 
     - `#define LIMHAMN_DATABASE_IMPL` (for implementation)
     - `#define LIMHAMN_DATABASE_SQLITE3` (for SQLite3 support)
