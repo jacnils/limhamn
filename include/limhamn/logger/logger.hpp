@@ -133,19 +133,19 @@ namespace limhamn::logger {
 }
 
 #ifdef LIMHAMN_LOGGER_IMPL
-inline limhamn::logger::Logger::Logger(const logger::LoggerProperties& prop) {
+inline limhamn::logger::Logger::Logger(const LoggerProperties& prop) {
     this->prop = prop;
 }
 
-inline void limhamn::logger::Logger::override_properties(const logger::LoggerProperties& prop) {
+inline void limhamn::logger::Logger::override_properties(const LoggerProperties& prop) noexcept {
     this->prop = prop;
 }
 
-inline limhamn::logger::LoggerProperties limhamn::logger::Logger::get() {
+inline limhamn::logger::LoggerProperties limhamn::logger::Logger::get() noexcept {
     return this->prop;
 }
 
-inline limhamn::logger::LoggerReturn limhamn::logger::Logger::write_to_log(const logger::LoggerErrorType type, const std::string& data) const {
+inline limhamn::logger::LoggerReturn limhamn::logger::Logger::write_to_log(const LoggerErrorType type, const std::string& data) const noexcept {
     std::string prefix{"[UNKNOWN]: "};
     std::string logfile{"logfile.txt"};
     logger::LoggerReturn ret{};

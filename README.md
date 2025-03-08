@@ -65,6 +65,26 @@ Then, include the headers you need in your project.
     - `#define LIMHAMN_DATABASE_ICONV` (for iconv support)
   - C++ version: C++17(?)
   - File version: 0.1.0
+- `limhamn/http/http_client.hpp`: Simple HTTP client for C++ projects.
+  - Dependencies: Boost.Beast, Boost.Asio, Boost.System, OpenSSL 
+  - Usage: `#include "limhamn/http/http_client.hpp"`
+  - Prerequisites: `#define LIMHAMN_HTTP_CLIENT_IMPL` (for implementation)
+  - C++ version: C++17(?)
+  - File version: 0.1.0
+- `limhamn/http/http_server.hpp`: Simple HTTP server for C++ projects.
+  - Dependencies: Boost.Beast, Boost.Asio, Boost.System, OpenSSL 
+  - Usage: `#include "limhamn/http/http_server.hpp"`
+  - Prerequisites: `#define LIMHAMN_HTTP_SERVER_IMPL` (for implementation)
+  - C++ version: C++17(?)
+  - File version: 0.1.0
+- `limhamn/smtp/smtp_client.hpp`: Simple STARTTLS SMTP client for C++ projects.
+  - Dependencies: Boost.Beast, Boost.Asio, Boost.System, OpenSSL 
+  - Usage: `#include "limhamn/smtp/smtp_client.hpp"`
+  - Prerequisites: `#define LIMHAMN_SMTP_CLIENT_IMPL` (for implementation)
+  - C++ version: C++17(?)
+  - File version: 0.1.0
+  - Note: Does not receive emails (as of now), its purpose is to send emails for e.g. registration.
+  - Note: Currently doesn't provide good feedback or really any kind of response. It throws exceptions on failure, though.
 
 ## Naming
 

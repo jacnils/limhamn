@@ -13,7 +13,6 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
-#include <algorithm>
 
 #define LIMHAMN_INI_PARSER
 
@@ -244,7 +243,7 @@ inline void limhamn::ini::ini_parser::save(const std::string& file) {
     }
 }
 
-void limhamn::ini::ini_parser::set(const std::string& header, const std::string& key, const std::string& value) {
+inline void limhamn::ini::ini_parser::set(const std::string& header, const std::string& key, const std::string& value) {
     if (header.empty()) {
         throw std::invalid_argument("header is empty");
     }

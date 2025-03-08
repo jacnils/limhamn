@@ -84,7 +84,7 @@ inline void limhamn::argument_manager::argument_manager::execute(const std::func
             col.index = i;
             col.arguments = arguments;
 
-            flags[arguments[i]](collection);
+            flags[arguments[i]](col);
 
             i = col.index;
         } else {
