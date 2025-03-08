@@ -23,68 +23,68 @@ namespace limhamn::logger {
     /**
      * @brief  List of integers representing log types.
      */
-    enum class Type {
-        Access,
-        Error,
-        Warning,
-        Notice,
-        Undefined,
+    enum class type {
+        access,
+        error,
+        warning,
+        notice,
+        undefined,
     };
 
     /**
      * @brief  List of integers representing success or failure.
      */
-    enum class Status {
-        Success,
-        Failure,
-        Undefined,
+    enum class status {
+        success,
+        failure,
+        undefined,
     };
 
     /**
      * @brief  List of integers representing known output streams
      */
-    enum class Stream {
-        Stdout,
-        Stderr,
-        None,
+    enum class stream {
+        stdout,
+        stderr,
+        none,
     };
 
-    using LoggerStatus = Status;
-    using LoggerErrorType = Type;
-    using LoggerStream = Stream;
-    using LoggerFile = std::string;
-    using LoggerBoolean = bool;
-    using LoggerPrefix = std::string;
+    using logger_status = status;
+    using logger_error_type = type;
+    using logger_stream = stream;
+    using logger_file = std::string;
+    using logger_boolean = bool;
+    using logger_prefix = std::string;
 
     /**
      * @brief  Struct containing settings to initialize the logger with.
      */
-    struct LoggerProperties {
-        LoggerBoolean output_to_std{false};
-        LoggerBoolean output_to_file{true};
-        LoggerStream stream{Stream::Stderr};
-        LoggerBoolean log_date{true};
-        LoggerBoolean log_access_to_file{true};
-        LoggerBoolean log_error_to_file{true};
-        LoggerBoolean log_warning_to_file{true};
-        LoggerBoolean log_notice_to_file{true};
-        LoggerFile access_log_file{"/var/log/limhamn/access.log"};
-        LoggerFile error_log_file{"/var/log/limhamn/error.log"};
-        LoggerFile warning_log_file{"/var/log/limhamn/warning.log"};
-        LoggerFile notice_log_file{"/var/log/limhamn/notice.log"};
-        LoggerPrefix access_log_prefix{"[ACCESS]: "};
-        LoggerPrefix error_log_prefix{"[ERROR]: "};
-        LoggerPrefix warning_log_prefix{"[WARNING]: "};
-        LoggerPrefix notice_log_prefix{"[NOTICE]: "};
+    struct logger_properties {
+        logger_boolean output_to_std{false};
+        logger_boolean output_to_file{true};
+        logger_stream stream{stream::stderr};
+        logger_boolean log_date{true};
+        logger_boolean log_access_to_file{true};
+        logger_boolean log_error_to_file{true};
+        logger_boolean log_warning_to_file{true};
+        logger_boolean log_notice_to_file{true};
+        logger_file access_log_file{"/var/log/limhamn/access.log"};
+        logger_file error_log_file{"/var/log/limhamn/error.log"};
+        logger_file warning_log_file{"/var/log/limhamn/warning.log"};
+        logger_file notice_log_file{"/var/log/limhamn/notice.log"};
+        logger_prefix access_log_prefix{"[ACCESS]: "};
+        logger_prefix error_log_prefix{"[ERROR]: "};
+        logger_prefix warning_log_prefix{"[WARNING]: "};
+        logger_prefix notice_log_prefix{"[NOTICE]: "};
     };
 
     /**
      * @brief  Struct containing the return values of the logger.
      */
-    struct LoggerReturn {
-        LoggerErrorType type{Type::Undefined};
-        LoggerStatus status{Status::Success};
-        LoggerStream stream{Stream::None};
+    struct logger_return {
+        logger_error_type type{type::undefined};
+        logger_status status{status::success};
+        logger_stream stream{stream::none};
         std::string message{};
         std::string date{};
         std::string data{};
@@ -95,75 +95,75 @@ namespace limhamn::logger {
     /**
      * @brief  Class that handles logging.
      */
-    class Logger {
-            LoggerProperties prop{};
+    class logger {
+            logger_properties prop{};
         public:
             /**
              * @brief  Constructor for the logger.
-             * @param  prop: LoggerProperties struct containing the settings for the logger.
+             * @param  prop: logger_properties struct containing the settings for the logger.
              */
-            explicit Logger(const LoggerProperties& prop);
+            explicit logger(const logger_properties& prop);
             /**
              * @brief  Default constructor for the logger.
              */
-            explicit Logger() = default;
+            explicit logger() = default;
             /**
              * @brief  Default destructor for the logger.
              */
-            ~Logger() = default;
+            ~logger() = default;
 
             /**
              * @brief  Writes data to the log.
-             * @param  type: LoggerErrorType enum representing the type of log.
+             * @param  type: logger_error_type enum representing the type of log.
              * @param  data: std::string containing the data to log.
-             * @return LoggerReturn struct containing the return values of the logger.
+             * @return logger_return struct containing the return values of the logger.
              */
-            [[nodiscard]] LoggerReturn write_to_log(logger::LoggerErrorType type, const std::string& data) const noexcept; // NOLINT
+            [[nodiscard]] logger_return write_to_log(logger_error_type type, const std::string& data) const noexcept; // NOLINT
             /**
              * @brief  Overrides the properties of the logger.
-             * @param  prop: LoggerProperties struct containing the settings for the logger.
+             * @param  prop: logger_properties struct containing the settings for the logger.
              */
-            void override_properties(const LoggerProperties& prop) noexcept;
+            void override_properties(const logger_properties& prop) noexcept;
             /**
              * @brief  Gets the properties of the logger.
-             * @return LoggerProperties struct containing the settings for the logger.
+             * @return logger_properties struct containing the settings for the logger.
              */
-            [[nodiscard]] LoggerProperties get() noexcept;
+            [[nodiscard]] logger_properties get() noexcept;
     };
 }
 
 #ifdef LIMHAMN_LOGGER_IMPL
-inline limhamn::logger::Logger::Logger(const LoggerProperties& prop) {
+inline limhamn::logger::logger::logger(const logger_properties& prop) {
     this->prop = prop;
 }
 
-inline void limhamn::logger::Logger::override_properties(const LoggerProperties& prop) noexcept {
+inline void limhamn::logger::logger::override_properties(const logger_properties& prop) noexcept {
     this->prop = prop;
 }
 
-inline limhamn::logger::LoggerProperties limhamn::logger::Logger::get() noexcept {
+inline limhamn::logger::logger_properties limhamn::logger::logger::get() noexcept {
     return this->prop;
 }
 
-inline limhamn::logger::LoggerReturn limhamn::logger::Logger::write_to_log(const LoggerErrorType type, const std::string& data) const noexcept {
+inline limhamn::logger::logger_return limhamn::logger::logger::write_to_log(const logger_error_type type, const std::string& data) const noexcept {
     std::string prefix{"[UNKNOWN]: "};
     std::string logfile{"logfile.txt"};
-    logger::LoggerReturn ret{};
+    logger_return ret{};
 
-    if (type == logger::Type::Warning) {
+    if (type == type::warning) {
         prefix = prop.warning_log_prefix;
         logfile = prop.warning_log_file;
-    } else if (type == logger::Type::Error) {
+    } else if (type == type::error) {
         prefix = prop.error_log_prefix;
         logfile = prop.error_log_file;
-    } else if (type == logger::Type::Access) {
+    } else if (type == type::access) {
         prefix = prop.access_log_prefix;
         logfile = prop.access_log_file;
-    } else if (type == logger::Type::Notice) {
+    } else if (type == type::notice) {
         prefix = prop.notice_log_prefix;
         logfile = prop.notice_log_file;
     } else {
-        ret.status = logger::Status::Failure;
+        ret.status = status::failure;
         return ret;
     }
 
@@ -184,12 +184,12 @@ inline limhamn::logger::LoggerReturn limhamn::logger::Logger::write_to_log(const
     ret.type = type;
 
     if (prop.output_to_std) {
-        if (prop.stream == logger::Stream::Stderr) {
+        if (prop.stream == stream::stderr) {
             std::cerr << prefix << data;
-        } else if (prop.stream == logger::Stream::Stdout) {
+        } else if (prop.stream == stream::stdout) {
             std::cout << prefix << data;
         } else {
-            ret.status = logger::Status::Failure;
+            ret.status = status::failure;
             return ret;
         }
     }
@@ -204,12 +204,12 @@ inline limhamn::logger::LoggerReturn limhamn::logger::Logger::write_to_log(const
             stream << prefix << data;
             stream.close();
 
-            ret.status = logger::Status::Success;
+            ret.status = status::success;
         } else {
-            ret.status = logger::Status::Failure;
+            ret.status = status::failure;
         }
     } else {
-        ret.status = logger::Status::Success;
+        ret.status = status::success;
     }
 
     return ret;
