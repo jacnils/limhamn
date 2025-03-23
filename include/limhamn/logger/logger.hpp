@@ -113,12 +113,18 @@ namespace limhamn::logger {
             ~logger() = default;
 
             /**
-             * @brief  Writes data to the log.
+             * @brief  Writes data to the log, returning feedback.
              * @param  type: logger_error_type enum representing the type of log.
              * @param  data: std::string containing the data to log.
              * @return logger_return struct containing the return values of the logger.
              */
-            logger_return write_to_log(logger_error_type type, const std::string& data) const noexcept; // NOLINT
+            logger_return write_to_log_f(logger_error_type type, const std::string& data) const noexcept; // NOLINT
+            /**
+             * @brief  Writes data to the log.
+             * @param  type: logger_error_type enum representing the type of log.
+             * @param  data: std::string containing the data to log.
+             */
+            void write_to_log(logger_error_type type, const std::string& data) const noexcept; // NOLINT
             /**
              * @brief  Overrides the properties of the logger.
              * @param  prop: logger_properties struct containing the settings for the logger.
@@ -145,7 +151,11 @@ inline limhamn::logger::logger_properties limhamn::logger::logger::get() noexcep
     return this->prop;
 }
 
-inline limhamn::logger::logger_return limhamn::logger::logger::write_to_log(const logger_error_type type, const std::string& data) const noexcept {
+inline void limhamn::logger::logger::write_to_log(const logger_error_type type, const std::string& data) const noexcept {
+    static_cast<void>(write_to_log_f(type, data));
+}
+
+inline limhamn::logger::logger_return limhamn::logger::logger::write_to_log_f(const logger_error_type type, const std::string& data) const noexcept {
     std::string prefix{"[UNKNOWN]: "};
     std::string logfile{"logfile.txt"};
     logger_return ret{};
