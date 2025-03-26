@@ -326,20 +326,12 @@ inline std::vector<limhamn::http::utils::multipart_file> limhamn::http::utils::p
             const std::size_t filename_start{headers.find('"', pos) + 1};
             const std::size_t filename_end{headers.find('"', filename_start)};
 
-            if (filename_start == std::string::npos || filename_end == std::string::npos) {
-                continue;
+            if (filename_start != std::string::npos && filename_end != std::string::npos) {
+                file.filename = headers.substr(filename_start, filename_end - filename_start);
+                file.filename.erase(std::remove_if(file.filename.begin(), file.filename.end(), [](const char c) {
+                    return c == '/' || c == '\\';
+                }), file.filename.end());
             }
-
-            file.filename = headers.substr(filename_start, filename_end - filename_start);
-            file.filename.erase(std::remove_if(file.filename.begin(), file.filename.end(), [](const char c) {
-                return c == '/' || c == '\\';
-            }), file.filename.end());
-
-            if (file.filename.empty()) {
-                continue;
-            }
-        } else {
-            continue;
         }
 
         std::size_t pos2{headers.find(" name=")};
@@ -350,12 +342,12 @@ inline std::vector<limhamn::http::utils::multipart_file> limhamn::http::utils::p
             std::size_t name_start{headers.find('"', pos2) + 1};
             std::size_t name_end{headers.find('"', name_start)};
 
-            if (name_start == std::string::npos || name_end == std::string::npos) {
-                continue;
+            if (name_start != std::string::npos && name_end != std::string::npos) {
+                file.name = headers.substr(name_start, name_end - name_start);
             }
+        }
 
-            file.name = headers.substr(name_start, name_end - name_start);
-        } else {
+        if (file.name.empty()) {
             continue;
         }
 
@@ -396,7 +388,6 @@ inline std::vector<limhamn::http::utils::multipart_file> limhamn::http::utils::p
                 if (it.name == file.name) {
                     it.size += file.size;
                     new_file = false;
-
                     break;
                 }
             }
