@@ -91,6 +91,16 @@ Then, include the headers you need in your project.
   - File version: 0.1.0
   - Note: Does not receive emails (as of now), its purpose is to send emails for e.g. registration.
   - Note: Currently doesn't provide good feedback or really any kind of response. It throws exceptions on failure, though.
+- `limhamn/primitive/primitive.hpp`: Primitive drawing for C++ (Xlib and canvas support)
+  - Dependencies: Cairo, Pango, XLib (optional)
+  - Usage: `#include "limhamn/primitive/primitive.hpp"`
+  - Prerequisites: 
+    - `#define LIMHAMN_PRIMITIVE_IMPL` (for implementation)
+    - `#define LIMHAMN_PRIMITIVE_X11` (for Xlib support)
+    - `#define LIMHAMN_PRIMITIVE_CANVAS` (for canvas support)
+  - C++ version: C++20
+  - File version: 0.1.0
+  - Note: Quite basic, but functional. Does not include any window/client management.
 
 ## Naming
 
