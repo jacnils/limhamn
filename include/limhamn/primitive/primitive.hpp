@@ -8,6 +8,7 @@
 #include <cmath>
 #include <algorithm>
 #include <sstream>
+#include <vector>
 
 #define LIMHAMN_PRIMITIVE
 
@@ -24,6 +25,10 @@
  * @brief Namespace for the primitive drawing library.
  */
 namespace limhamn::primitive {
+    class draw_manager;
+    class font_manager;
+    class image_manager;
+
     /**
      * @brief Class for managing fonts in the drawing context.
      * @note Quite primitive, for internal use by the draw_manager class.
@@ -53,7 +58,7 @@ namespace limhamn::primitive {
          * @pre The font manager must be initialized with a font.
          * @return A reference to the PangoLayout object.
          */
-        [[nodiscard]] PangoLayout& get_layout();
+        [[nodiscard]] PangoLayout& get_layout() const;
         /**
          * @brief Initializes the font manager with a specified font.
          * @param font The name of the font to be used. (e.g "Sans 12")
@@ -115,9 +120,42 @@ namespace limhamn::primitive {
      * @brief Structure for managing image properties.
      * @note This structure is used for image drawing.
      */
-    struct image_manager {
+    class image_manager {
         uint8_t* data{};
         cairo_surface_t* img_surface{};
+        cairo_t* img_context{};
+        bool initialized{false};
+    public:
+        image_manager() = default;
+        /**
+         * @brief Initializes the image manager with image data.
+         * @param data Pointer to the image data.
+         * @param w Width of the image.
+         * @param h Height of the image.
+         */
+        image_manager(uint8_t* data, int w, int h);
+        /**
+         * @brief Initializes the image manager with image data.
+         * @param data Pointer to the image data.
+         * @param w Width of the image.
+         * @param h Height of the image.
+         */
+        void initialize(uint8_t* data, int w, int h);
+        /**
+         * @brief Get the raw cairo_surface_t* object.
+         * @return Pointer to the cairo_surface_t object.
+         * @note Do not under any circumstances free or destroy this object.
+         */
+        [[nodiscard]] cairo_surface_t* get_surface() const;
+        /**
+         * @brief Get the raw cairo_t* object.
+         * @return Pointer to the cairo_t object.
+         * @note Do not under any circumstances free or destroy this object.
+         */
+        [[nodiscard]] cairo_t* get_context() const;
+        ~image_manager();
+
+        friend draw_manager;
     };
     /**
      * @brief Structure for managing drawing properties.
@@ -180,12 +218,12 @@ namespace limhamn::primitive {
 #if LIMHAMN_PRIMITIVE_CANVAS
         canvas_window canvas_win{};
 #endif
-        image_manager img_manager{};
         font_manager font{};
         cairo_surface_t* surface{};
         cairo_t* d{};
 
         static void cairo_set_source_hex(cairo_t* cr, const std::string& col, int alpha);
+        void reinit();
     public:
         explicit draw_manager() = default;
 #if LIMHAMN_PRIMITIVE_CANVAS
@@ -250,20 +288,20 @@ namespace limhamn::primitive {
          * @param slash The slash direction (0 or 1).
          * @param props The properties of the arrow shape.
          */
-        void draw_arrow(const draw_position& pos, int direction, int slash, const draw_shape_properties& props) const;
+        void draw_arrow(const draw_position& pos, int direction, int slash, const draw_shape_properties& props);
         /**
          * @brief Draws a circle shape on the canvas.
          * @param pos The position and size of the circle.
          * @param direction The direction of the circle (0 or 1).
          * @param props The properties of the circle shape.
          */
-        void draw_circle(const draw_position& pos, int direction, const draw_shape_properties& props) const;
+        void draw_circle(const draw_position& pos, int direction, const draw_shape_properties& props);
         /**
          * @brief Draws a rectangle shape on the canvas.
          * @param pos The position and size of the rectangle.
          * @param props The properties of the rectangle shape.
          */
-        void draw_rect(const draw_position& pos, const draw_properties& props) const;
+        void draw_rect(const draw_position& pos, const draw_properties& props);
 #if LIMHAMN_PRIMITIVE_X11
         /*
          * @brief Map the drawable to a window.
@@ -390,7 +428,7 @@ inline void limhamn::primitive::font_manager::init_font(const std::string& font)
         this->h
     };
 }
-[[nodiscard]] inline PangoLayout& limhamn::primitive::font_manager::get_layout() {
+[[nodiscard]] inline PangoLayout& limhamn::primitive::font_manager::get_layout() const {
     if (!this->layout) {
         throw std::runtime_error("FontManager not initialized");
     }
@@ -413,6 +451,78 @@ inline limhamn::primitive::font_manager::~font_manager() {
         g_object_unref(this->layout);
     }
 }
+
+inline void limhamn::primitive::image_manager::initialize(uint8_t* data, int w, int h) {
+    if (!data || !w || !h) {
+        throw std::invalid_argument("Invalid arguments to ImageManager constructor");
+    }
+    if (this->initialized) {
+        throw std::runtime_error("ImageManager already initialized");
+    }
+
+    for (int i = 0; i < w * h; i++) {
+        uint8_t* px = &data[i*4];
+        const uint8_t r = px[0];
+        const uint8_t g = px[1];
+        const uint8_t b = px[2];
+        const uint8_t a = px[3];
+
+        px[0] = (r * a) / 255;
+        px[1] = (g * a) / 255;
+        px[2] = (b * a) / 255;
+        px[3] = a;
+    }
+
+    this->initialized = true;
+
+    img_surface = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, w, h, 4 * w);
+    if (!img_surface || cairo_surface_status(img_surface) != CAIRO_STATUS_SUCCESS) {
+        this->initialized = false;
+        throw std::runtime_error("Failed to create image surface");
+    }
+    img_context = cairo_create(img_surface);
+    if (!img_context || cairo_status(img_context) != CAIRO_STATUS_SUCCESS) {
+        this->initialized = false;
+        throw std::runtime_error("Failed to create image context");
+    }
+}
+
+inline limhamn::primitive::image_manager::image_manager(uint8_t* data, int w, int h) : data(data) {
+    this->initialize(data, w, h);
+}
+
+inline cairo_surface_t* limhamn::primitive::image_manager::get_surface() const {
+    if (!this->initialized) {
+        throw std::runtime_error("ImageManager not initialized");
+    }
+
+    return this->img_surface;
+}
+
+inline cairo_t* limhamn::primitive::image_manager::get_context() const {
+    if (!this->initialized) {
+        throw std::runtime_error("ImageManager not initialized");
+    }
+
+    return this->img_context;
+}
+
+inline limhamn::primitive::image_manager::~image_manager() {
+    if (!initialized) {
+        return;
+    }
+
+    if (img_surface && cairo_surface_get_reference_count(img_surface) != 0) {
+        cairo_surface_destroy(img_surface);
+    }
+
+    if (img_context && cairo_get_reference_count(img_context) != 0) {
+        cairo_destroy(img_context);
+    }
+
+    initialized = false;
+}
+
 inline void limhamn::primitive::draw_manager::cairo_set_source_hex(cairo_t* cr, const std::string& col, int alpha) {
     if (col.empty() || col[0] != '#' || col.length() != 7) {
         throw std::invalid_argument("Invalid color format. Expected format: #RRGGBB");
@@ -444,12 +554,7 @@ inline void limhamn::primitive::draw_manager::initialize(void* data, int w, int 
     this->w = w;
     this->h = h;
 
-    this->surface = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, w, h, w * 4);
-    this->d = cairo_create(this->surface);
-
-    if (!this->d) {
-        throw std::runtime_error("Failed to create cairo context");
-    }
+    this->reinit();
 }
 #endif
 #if LIMHAMN_PRIMITIVE_X11
@@ -480,7 +585,10 @@ inline void limhamn::primitive::draw_manager::initialize_x11(Display* dpy, int s
         XFreePixmap(dpy, this->xwin.drawable);
         throw std::runtime_error("Failed to create graphics context");
     }
+
     XSetLineAttributes(dpy, this->xwin.gc, 1, LineSolid, CapButt, JoinMiter);
+
+    this->reinit();
 }
 inline limhamn::primitive::draw_manager::draw_manager(Display* dpy, int screen, Window root, unsigned int w, unsigned int h, Visual *visual, unsigned int depth, Colormap cmap) {
     initialize_x11(dpy, screen, root, w, h, visual, depth, cmap);
@@ -513,47 +621,21 @@ inline void limhamn::primitive::draw_manager::draw_image(void* data, const draw_
     if (data == nullptr) {
         throw std::invalid_argument("Image data cannot be null");
     }
-    if (protocol::unknown == this->proto) {
-        throw std::invalid_argument("Invalid protocol");
-    }
 
-    this->img_manager = {};
-    this->img_manager.data = static_cast<uint8_t*>(data);
+    this->reinit();
 
-    for (int i = 0; i < coords.w * coords.h; i++) {
-        uint8_t* px = &this->img_manager.data[i * 4];
-        const uint8_t r = px[0];
-        const uint8_t g = px[1];
-        const uint8_t b = px[2];
-        const uint8_t a = px[3];
-
-        px[0] = (r * a) / 255;
-        px[1] = (g * a) / 255;
-        px[2] = (b * a) / 255;
-        px[3] = a;
-    }
-
-    this->img_manager.img_surface =
-        cairo_image_surface_create_for_data(this->img_manager.data,
-            CAIRO_FORMAT_ARGB32,
-            coords.w,
-            coords.h,
-            coords.w * 4
-        );
-
-    if (!this->img_manager.img_surface) {
-        throw std::runtime_error("Failed to create image surface");
-    }
+    auto manager = image_manager();
+    manager.initialize(static_cast<uint8_t*>(data), coords.w, coords.h);
 
     cairo_set_operator(this->d, CAIRO_OPERATOR_OVER);
-    cairo_set_source_hex(this->d, "#ffffff", 255);
 
-    cairo_set_source_surface(this->d, this->img_manager.img_surface, coords.x, coords.y);
-    cairo_mask_surface(this->d, this->img_manager.img_surface, coords.x, coords.y);
+    cairo_set_source_surface(this->d, manager.get_surface(), coords.x, coords.y);
+    cairo_mask_surface(this->d, manager.get_surface(), coords.x, coords.y);
 
     cairo_set_source_surface(this->d, this->surface, this->w, this->h);
 }
-inline void limhamn::primitive::draw_manager::draw_arrow(const draw_position& pos, int direction, int slash, const draw_shape_properties& props) const {
+
+inline void limhamn::primitive::draw_manager::draw_arrow(const draw_position& pos, int direction, int slash, const draw_shape_properties& props) {
     int x = pos.x;
     int y = pos.y;
     int w = pos.w;
@@ -562,66 +644,33 @@ inline void limhamn::primitive::draw_manager::draw_arrow(const draw_position& po
     x = direction ? x : x + w;
     w = direction ? w : - w;
 
-    cairo_surface_t* sf = nullptr;
-
-    if (this->proto == protocol::canvas) {
-#if LIMHAMN_PRIMITIVE_CANVAS
-        sf = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, this->w, this->h, this->w * 4);
-#endif
-    } else {
-#if LIMHAMN_PRIMITIVE_X11
-        sf = cairo_xlib_surface_create(this->xwin.dpy, this->xwin.drawable, this->xwin.visual, this->w, this->h);
-#endif
-    }
-
-    if (!sf) {
-        throw std::runtime_error("Failed to create surface");
-    }
+    this->reinit();
 
     double hh = slash ? (direction ? 0 : h) : h / 2;
 
-    cairo_t* cr = cairo_create(sf);
-    cairo_set_source_hex(cr, props.prev, props.prev_alpha);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_hex(this->d, props.prev, props.prev_alpha);
+    cairo_set_operator(this->d, CAIRO_OPERATOR_SOURCE);
 
-    cairo_rectangle(cr, x, y, w, h);
-    cairo_fill(cr);
+    cairo_rectangle(this->d, x, y, w, h);
+    cairo_fill(this->d);
 
-    cairo_move_to(cr, x, y);
-    cairo_line_to(cr, x + w, y + hh);
-    cairo_line_to(cr, x, y + h);
-    cairo_close_path(cr);
+    cairo_move_to(this->d, x, y);
+    cairo_line_to(this->d, x + w, y + hh);
+    cairo_line_to(this->d, x, y + h);
+    cairo_close_path(this->d);
 
-    cairo_set_source_hex(cr, props.next, props.next_alpha);
-    cairo_fill(cr);
-
-    cairo_destroy(cr);
-    cairo_surface_destroy(sf);
+    cairo_set_source_hex(this->d, props.next, props.next_alpha);
+    cairo_fill(this->d);
 }
-inline void limhamn::primitive::draw_manager::draw_circle(const draw_position& pos, int direction, const draw_shape_properties& props) const {
-    cairo_surface_t *sf = nullptr;
 
-    if (this->proto == protocol::canvas) {
-#if LIMHAMN_PRIMITIVE_CANVAS
-        sf = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, this->w, this->h, this->w * 4);
-#endif
-    } else {
-#if LIMHAMN_PRIMITIVE_X11
-        sf = cairo_xlib_surface_create(this->xwin.dpy, this->xwin.drawable, this->xwin.visual, this->w, this->h);
-#endif
-    }
+inline void limhamn::primitive::draw_manager::draw_circle(const draw_position& pos, int direction, const draw_shape_properties& props) {
+    this->reinit();
 
-    if (!sf) {
-        throw std::runtime_error("Failed to create surface");
-    }
+    cairo_set_source_hex(this->d, props.prev, props.prev_alpha);
+    cairo_set_operator(this->d, CAIRO_OPERATOR_SOURCE);
 
-    cairo_t *cr = cairo_create(sf);
-
-    cairo_set_source_hex(cr, props.prev, props.prev_alpha);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-
-    cairo_rectangle(cr, pos.x, pos.y, pos.w, pos.h);
-    cairo_fill(cr);
+    cairo_rectangle(this->d, pos.x, pos.y, pos.w, pos.h);
+    cairo_fill(this->d);
 
     double cx = direction ? pos.x + pos.w - pos.h / 2.0 : pos.x + pos.h / 2.0;
     double cy = pos.y + pos.h / 2;
@@ -630,47 +679,25 @@ inline void limhamn::primitive::draw_manager::draw_circle(const draw_position& p
     double start = direction ? -M_PI_2 : M_PI_2;
     double end = direction ? M_PI_2 : 3 * M_PI_2;
 
-    cairo_arc(cr, cx, cy, rad, start, end);
-    cairo_close_path(cr);
+    cairo_arc(this->d, cx, cy, rad, start, end);
+    cairo_close_path(this->d);
 
-    cairo_set_source_hex(cr, props.next, props.next_alpha);
-    cairo_fill(cr);
-
-    cairo_destroy(cr);
-    cairo_surface_destroy(sf);
+    cairo_set_source_hex(this->d, props.next, props.next_alpha);
+    cairo_fill(this->d);
 }
-inline void limhamn::primitive::draw_manager::draw_rect(const draw_position& pos, const draw_properties& props) const {
-    cairo_surface_t *sf;
+inline void limhamn::primitive::draw_manager::draw_rect(const draw_position& pos, const draw_properties& props) {
+    this->reinit();
 
-    if (this->proto == protocol::canvas) {
-#if LIMHAMN_PRIMITIVE_CANVAS
-        sf = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, this->w, this->h, this->w * 4);
-#endif
-    } else {
-#if LIMHAMN_PRIMITIVE_X11
-        sf = cairo_xlib_surface_create(this->xwin.dpy, this->xwin.drawable, this->xwin.visual, this->w, this->h);
-#endif
-    }
-
-    cairo_t *cr = cairo_create(sf);
-
-    if (!cr) {
-        throw std::runtime_error("Failed to create cairo context");
-    }
-
-    cairo_set_source_hex(cr, props.invert ? props.background.c_str() : props.foreground.c_str(), props.invert ? props.background_alpha : props.foreground_alpha);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_hex(this->d, props.invert ? props.background.c_str() : props.foreground.c_str(), props.invert ? props.background_alpha : props.foreground_alpha);
+    cairo_set_operator(this->d, CAIRO_OPERATOR_SOURCE);
 
     if (props.filled) {
-        cairo_rectangle(cr, pos.x, pos.y, pos.w, pos.h);
-        cairo_fill(cr);
+        cairo_rectangle(this->d, pos.x, pos.y, pos.w, pos.h);
+        cairo_fill(this->d);
     } else {
-        cairo_rectangle(cr, pos.x, pos.y, pos.w - 1, pos.h - 1);
-        cairo_stroke(cr);
+        cairo_rectangle(this->d, pos.x, pos.y, pos.w - 1, pos.h - 1);
+        cairo_stroke(this->d);
     }
-
-    cairo_destroy(cr);
-    cairo_surface_destroy(sf);
 }
 #if LIMHAMN_PRIMITIVE_X11
 inline void limhamn::primitive::draw_manager::map(Window win) const {
@@ -710,6 +737,34 @@ inline void limhamn::primitive::draw_manager::initialize_font(const std::string&
 
     this->font.init_font(font);
 }
+inline void limhamn::primitive::draw_manager::reinit() {
+    if (this->surface && cairo_surface_get_reference_count(this->surface) != 0) {
+        cairo_surface_destroy(this->surface);
+    }
+    if (this->d && cairo_get_reference_count(this->d) != 0) {
+        cairo_destroy(this->d);
+    }
+
+    if (this->proto == protocol::unknown) {
+        throw std::runtime_error("Unknown protocol");
+    }
+
+    if (this->proto == protocol::canvas) {
+#if LIMHAMN_PRIMITIVE_CANVAS
+        this->surface = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, this->w, this->h, this->w * 4);
+#endif
+    } else {
+#if LIMHAMN_PRIMITIVE_X11
+        this->surface = cairo_xlib_surface_create(this->xwin.dpy, this->xwin.drawable, this->xwin.visual, this->w, this->h);
+#endif
+    }
+
+    this->d = cairo_create(this->surface);
+    if (!this->d) {
+        throw std::runtime_error("Failed to create cairo context");
+    }
+}
+
 inline int limhamn::primitive::draw_manager::draw_text(const draw_position& pos, int padding, const std::string& input_text, bool markup, const draw_properties& props) {
     int x = pos.x;
     int y = pos.y;
@@ -728,17 +783,7 @@ inline int limhamn::primitive::draw_manager::draw_text(const draw_position& pos,
         x += padding;
         w -= padding;
 
-        if (proto == protocol::canvas) {
-#if LIMHAMN_PRIMITIVE_CANVAS
-            this->surface = cairo_image_surface_create_for_data(static_cast<unsigned char*>(this->canvas_win.data), CAIRO_FORMAT_ARGB32, this->w, this->h, this->w * 4);
-#endif
-        } else {
-#if LIMHAMN_PRIMITIVE_X11
-            this->surface = cairo_xlib_surface_create(this->xwin.dpy, this->xwin.drawable, this->xwin.visual, this->w, this->h);
-#endif
-        }
-
-        this->d = cairo_create(this->surface);
+        this->reinit();
 
         cairo_set_source_hex(this->d, props.invert ? props.foreground.c_str() : props.background.c_str(), props.invert ? props.foreground_alpha : props.background_alpha);
         cairo_set_operator(this->d, CAIRO_OPERATOR_SOURCE);
@@ -833,5 +878,12 @@ inline limhamn::primitive::draw_manager::~draw_manager() {
         XFreeGC(this->xwin.dpy, this->xwin.gc);
     }
 #endif
+
+    if (this->surface && cairo_surface_get_reference_count(this->surface) != 0) {
+        cairo_surface_destroy(this->surface);
+    }
+    if (this->d && cairo_get_reference_count(this->d) != 0) {
+        cairo_destroy(this->d);
+    }
 }
 #endif // LIMHAMN_PRIMITIVE_IMPL
