@@ -1,3 +1,13 @@
+/* limhamn::primitive - Primitive drawing wrapper for C++
+ * Copyright (c) 2022-2025 Jacob Nilsson
+ * Licensed under the MIT license
+ *
+ * Dependencies: Cairo, Pango
+ * - Xlib: Opt-in, #define LIMHAMN_PRIMITIVE_X11
+ * C++ version: >=17
+ * File version: 0.1.0
+ * Link: g++ ... -lx11 -DLIMHAMN_PRIMITIVE_X11 -DLIMHAMN_PRIMITIVE_IMPL
+ */
 #pragma once
 
 #include <cairo/cairo.h>
