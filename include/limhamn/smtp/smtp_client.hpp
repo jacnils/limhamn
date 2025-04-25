@@ -10,10 +10,12 @@
 #pragma once
 
 #include <string>
+#ifdef LIMHAMN_SMTP_CLIENT_IMPL
 #include <openssl/evp.h>
 #include <boost/system/detail/error_code.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#endif
 
 #define LIMHAMN_SMTP_CLIENT
 

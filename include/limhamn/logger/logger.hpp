@@ -9,9 +9,11 @@
 
 #pragma once
 
+#ifdef LIMHAMN_LOGGER_IMPL
 #include <iostream>
-#include <string>
 #include <fstream>
+#endif
+#include <string>
 #include <ctime>
 
 #define LIMHAMN_LOGGER

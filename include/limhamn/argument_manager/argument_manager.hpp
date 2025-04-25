@@ -12,7 +12,9 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
+#ifdef LIMHAMN_ARGUMENT_MANAGER_IMPL
 #include <sstream>
+#endif
 #include <vector>
 
 #define LIMHAMN_ARGUMENT_MANAGER

@@ -12,6 +12,7 @@
 #include <string>
 #include <functional>
 #include <unordered_map>
+#ifdef LIMHAMN_HTTP_SERVER_IMPL
 #include <filesystem>
 #include <sstream>
 #include <fstream>
@@ -20,6 +21,7 @@
 #include <boost/system/detail/error_code.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#endif
 
 #define LIMHAMN_HTTP_SERVER
 

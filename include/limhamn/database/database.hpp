@@ -13,12 +13,14 @@
 
 #pragma once
 
+#ifdef LIMHAMN_DATABASE_IMPL
 #include <iostream>
+#include <fstream>
+#include <stdexcept>
+#endif
 #include <string>
 #include <vector>
-#include <fstream>
 #include <unordered_map>
-#include <stdexcept>
 #include <cstdint>
 
 #ifndef LIMHAMN_DATABASE_SQLITE3

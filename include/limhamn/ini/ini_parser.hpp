@@ -10,8 +10,10 @@
 #pragma once
 
 #include <string>
+#ifdef LIMHAMN_INI_PARSER_IMPL
 #include <fstream>
 #include <sstream>
+#endif
 #include <unordered_map>
 
 #define LIMHAMN_INI_PARSER
