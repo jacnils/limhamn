@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
+#include <filesystem>
 
 #define LIMHAMN_PRIMITIVE
 
@@ -734,6 +735,19 @@ inline void limhamn::primitive::draw_manager::save_screen(const std::string& fil
 
     if (!this->surface) {
         throw std::runtime_error("No surface to save");
+    }
+
+    if (std::filesystem::is_directory(file)) {
+        throw std::invalid_argument("Filename is a directory");
+    }
+
+    std::string path = std::filesystem::path(file).parent_path().string();
+    if (!std::filesystem::exists(path)) {
+        std::filesystem::create_directories(path);
+
+        if (!std::filesystem::is_directory(path)) {
+            throw std::runtime_error("Failed to create directory");
+        }
     }
 
     if (cairo_surface_write_to_png(this->surface, file.c_str()) != CAIRO_STATUS_SUCCESS) {
