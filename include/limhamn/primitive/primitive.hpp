@@ -20,6 +20,7 @@
 #include <sstream>
 #include <vector>
 #include <filesystem>
+#include <mutex>
 
 #define LIMHAMN_PRIMITIVE
 
@@ -48,6 +49,7 @@ namespace limhamn::primitive {
         unsigned int h{};
         PangoLayout* layout{};
         bool active{false};
+        std::recursive_mutex mtx{};
     public:
         explicit font_manager() = default;
         /**
@@ -63,7 +65,7 @@ namespace limhamn::primitive {
          * @param markup If true, markup is applied to the text.
          * @return A pair of integers representing the estimated width and height of the text.
          */
-        [[nodiscard]] std::pair<int,int> estimate_length(const std::string& text, int length = -1, bool markup = true) const;
+        [[nodiscard]] std::pair<int,int> estimate_length(const std::string& text, int length = -1, bool markup = true);
         /**
          * @brief Gets the internal PangoLayout object as a reference.
          * @pre The font manager must be initialized with a font.
@@ -136,6 +138,7 @@ namespace limhamn::primitive {
         cairo_surface_t* img_surface{};
         cairo_t* img_context{};
         bool initialized{false};
+        std::recursive_mutex mtx{};
     public:
         image_manager() = default;
         /**
@@ -232,6 +235,7 @@ namespace limhamn::primitive {
         font_manager font{};
         cairo_surface_t* surface{};
         cairo_t* d{};
+        std::recursive_mutex mtx{};
 
         static void cairo_set_source_hex(cairo_t* cr, const std::string& col, int alpha);
         void reinit();
@@ -319,18 +323,18 @@ namespace limhamn::primitive {
          * @param win The window to map the drawable to.
          * @note This function only needs to be called for X11 protocol. Do it when the window has been created and preferably when you're done drawing.
          */
-        void map(Window win) const;
+        void map(Window win);
 #endif
         /**
          * @brief Maps the drawable to the screen.
          * @note Does not need to be called, but exists anyway.
          */
-        void map() const;
+        void map();
         /**
          * @brief Saves the current screen to a file.
          * @param file The filename to save the screen to.
          */
-        void save_screen(const std::string& file) const;
+        void save_screen(const std::string& file);
         /**
          * @brief Initializes the font manager with a specified font.
          * @param font The name of the font to be used. (e.g "Sans 12")
@@ -375,6 +379,8 @@ namespace limhamn::primitive {
 
 #ifdef LIMHAMN_PRIMITIVE_IMPL
 inline void limhamn::primitive::font_manager::init_font(const std::string& font) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (this->active) {
         throw std::runtime_error("FontManager already initialized");
     }
@@ -408,7 +414,9 @@ inline void limhamn::primitive::font_manager::init_font(const std::string& font)
     pango_font_metrics_unref(metrics);
     g_object_unref(context);
 }
-[[nodiscard]] inline std::pair<int,int> limhamn::primitive::font_manager::estimate_length(const std::string& text, const int length, bool markup) const {
+[[nodiscard]] inline std::pair<int,int> limhamn::primitive::font_manager::estimate_length(const std::string& text, const int length, bool markup) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (!this->layout) {
         throw std::runtime_error("FontManager not initialized");
     }
@@ -464,6 +472,8 @@ inline limhamn::primitive::font_manager::~font_manager() {
 }
 
 inline void limhamn::primitive::image_manager::initialize(uint8_t* data, int w, int h) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (!data || !w || !h) {
         throw std::invalid_argument("Invalid arguments to ImageManager constructor");
     }
@@ -556,6 +566,8 @@ inline void limhamn::primitive::draw_manager::cairo_set_source_hex(cairo_t* cr, 
 
 #if LIMHAMN_PRIMITIVE_CANVAS
 inline void limhamn::primitive::draw_manager::initialize(void* data, int w, int h) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (!data || !w || !h) {
         throw std::invalid_argument("Invalid arguments to DrawManager constructor");
     }
@@ -570,6 +582,8 @@ inline void limhamn::primitive::draw_manager::initialize(void* data, int w, int 
 #endif
 #if LIMHAMN_PRIMITIVE_X11
 inline void limhamn::primitive::draw_manager::initialize_x11(Display* dpy, int screen, Window root, unsigned int w, unsigned int h, Visual *visual, unsigned int depth, Colormap cmap) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (!dpy || !root || !visual || !depth) {
         throw std::invalid_argument("Invalid arguments to DrawManager constructor");
     }
@@ -611,6 +625,8 @@ inline limhamn::primitive::draw_manager::draw_manager(void* data, int w, int h) 
 }
 #endif
 inline void limhamn::primitive::draw_manager::resize(const draw_size& size) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     this->w = size.w;
     this->h = size.h;
 #if LIMHAMN_PRIMITIVE_X11
@@ -629,6 +645,8 @@ inline void limhamn::primitive::draw_manager::resize(const draw_size& size) {
 #endif
 }
 inline void limhamn::primitive::draw_manager::draw_image(void* data, const draw_position& coords) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (data == nullptr) {
         throw std::invalid_argument("Image data cannot be null");
     }
@@ -647,6 +665,8 @@ inline void limhamn::primitive::draw_manager::draw_image(void* data, const draw_
 }
 
 inline void limhamn::primitive::draw_manager::draw_arrow(const draw_position& pos, int direction, int slash, const draw_shape_properties& props) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     int x = pos.x;
     int y = pos.y;
     int w = pos.w;
@@ -675,6 +695,8 @@ inline void limhamn::primitive::draw_manager::draw_arrow(const draw_position& po
 }
 
 inline void limhamn::primitive::draw_manager::draw_circle(const draw_position& pos, int direction, const draw_shape_properties& props) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     this->reinit();
 
     cairo_set_source_hex(this->d, props.prev, props.prev_alpha);
@@ -697,6 +719,8 @@ inline void limhamn::primitive::draw_manager::draw_circle(const draw_position& p
     cairo_fill(this->d);
 }
 inline void limhamn::primitive::draw_manager::draw_rect(const draw_position& pos, const draw_properties& props) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     this->reinit();
 
     cairo_set_source_hex(this->d, props.invert ? props.background.c_str() : props.foreground.c_str(), props.invert ? props.background_alpha : props.foreground_alpha);
@@ -711,7 +735,9 @@ inline void limhamn::primitive::draw_manager::draw_rect(const draw_position& pos
     }
 }
 #if LIMHAMN_PRIMITIVE_X11
-inline void limhamn::primitive::draw_manager::map(Window win) const {
+inline void limhamn::primitive::draw_manager::map(Window win) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (this->proto == protocol::x11) {
         if (!this->xwin.drawable) {
             throw std::runtime_error("Drawable not initialized");
@@ -723,12 +749,16 @@ inline void limhamn::primitive::draw_manager::map(Window win) const {
     }
 }
 #endif
-inline void limhamn::primitive::draw_manager::map() const {
+inline void limhamn::primitive::draw_manager::map() {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (this->proto == protocol::x11) {
         throw std::runtime_error("X11 must be called with a window");
     }
 }
-inline void limhamn::primitive::draw_manager::save_screen(const std::string& file) const {
+inline void limhamn::primitive::draw_manager::save_screen(const std::string& file) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (file.empty()) {
         throw std::invalid_argument("Invalid filename");
     }
@@ -762,6 +792,8 @@ inline void limhamn::primitive::draw_manager::initialize_font(const std::string&
     this->font.init_font(font);
 }
 inline void limhamn::primitive::draw_manager::reinit() {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     if (this->surface && cairo_surface_get_reference_count(this->surface) != 0) {
         cairo_surface_destroy(this->surface);
     }
@@ -790,6 +822,8 @@ inline void limhamn::primitive::draw_manager::reinit() {
 }
 
 inline int limhamn::primitive::draw_manager::draw_text(const draw_position& pos, int padding, const std::string& input_text, bool markup, const draw_properties& props) {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx);
+
     int x = pos.x;
     int y = pos.y;
     unsigned int w = pos.w;
