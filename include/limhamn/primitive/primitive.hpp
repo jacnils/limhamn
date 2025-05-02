@@ -929,10 +929,10 @@ inline limhamn::primitive::font_manager& limhamn::primitive::draw_manager::get_f
 }
 inline limhamn::primitive::draw_manager::~draw_manager() {
 #if LIMHAMN_PRIMITIVE_X11
-    if (this->proto == protocol::unknown && this->xwin.drawable) {
+    if (this->proto == protocol::x11 && this->xwin.dpy && this->xwin.drawable) {
         XFreePixmap(this->xwin.dpy, this->xwin.drawable);
     }
-    if (this->proto == protocol::x11 && this->xwin.gc) {
+    if (this->proto == protocol::x11 && this->xwin.dpy && this->xwin.gc) {
         XFreeGC(this->xwin.dpy, this->xwin.gc);
     }
 #endif
