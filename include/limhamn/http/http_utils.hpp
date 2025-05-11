@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <random>
 #ifdef LIMHAMN_HTTP_UTILS_IMPL
 #include <openssl/evp.h>
 #endif
