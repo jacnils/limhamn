@@ -546,6 +546,10 @@ namespace _limhamn_http_server_impl {
                         self->on_write(ec);
                     }
                 );
+
+                boost::beast::error_code close_ec;
+                static_cast<void>(net_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, close_ec));
+                static_cast<void>(net_socket.close(close_ec));
             }
 
             /**
