@@ -40,6 +40,7 @@ namespace limhamn::http::server {
         std::string domain{};
         std::string same_site{"Strict"};
         std::vector<std::string> attributes{};
+        bool http_only{false};
         std::unordered_map<std::string, std::string> extra_attributes{};
     };
 
@@ -90,6 +91,7 @@ namespace limhamn::http::server {
         unsigned int version{};
         std::vector<cookie> cookies{};
         std::unordered_map<std::string, std::string> session{};
+        std::string session_id{};
         std::unordered_map<std::string, std::string> fields{};
     };
 
@@ -154,6 +156,7 @@ namespace _limhamn_http_server_impl {
         std::tm* tm = std::gmtime(&time);
         char buffer[80];
         std::strftime(buffer, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
+
         return {(buffer)};
     }
 
@@ -461,13 +464,24 @@ namespace _limhamn_http_server_impl {
                         session_id.erase(std::remove(session_id.begin(), session_id.end(), '/'), session_id.end());
                         std::filesystem::path session_file = session_dir + "/session_" + session_id + ".txt";
                         request.session = read_from_session_file(session_file);
+                        request.session_id = session_id;
                     }
 
                     limhamn::http::server::response response = generate_response_from_endpoint(request);
 
                     if (!session_id_found && enable_session) {
                         session_id = generate_random_string();
-                        response.cookies.push_back({session_cookie_name, session_id, 0, "/", .same_site = "Strict"});
+
+                        for (const auto& it : response.cookies) {
+                            if (it.name == session_cookie_name) {
+                                session_id_found = true;
+                                break;
+                            }
+                        }
+
+                        if (!session_id_found) {
+                            response.cookies.push_back({session_cookie_name, session_id, 0, "/", .same_site = "Strict", .http_only = true});
+                        }
                     } else if (enable_session) {
                         std::string session_file = session_dir + "/session_" + session_id + ".txt";
                         std::unordered_map<std::string, std::string> stored = read_from_session_file(session_file);
@@ -485,6 +499,9 @@ namespace _limhamn_http_server_impl {
                             cookie_str += "Expires=" + convert_unix_millis_to_gmt(it.expires) + "; ";
                         } else {
                             cookie_str += "Expires=session; ";
+                        }
+                        if (it.http_only) {
+                            cookie_str += "HttpOnly; ";
                         }
                         if (!it.path.empty()) {
                             cookie_str += "Path=" + it.path + "; ";
@@ -506,7 +523,7 @@ namespace _limhamn_http_server_impl {
                     }
 
                     for (const auto& it : response.delete_cookies) {
-                        std::string cookie_str = it + "=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ";
+                        std::string cookie_str = it + "=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path=/; ";
                         net_response.insert(boost::beast::http::field::set_cookie, cookie_str);
                     }
 
