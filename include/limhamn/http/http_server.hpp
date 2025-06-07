@@ -68,6 +68,7 @@ namespace limhamn::http::server {
         bool enable_session{true};
         std::string session_directory{"./"};
         std::string session_cookie_name{"session_id"};
+        std::vector<std::string> associated_session_cookies{};
         int64_t max_request_size{1024 * 1024 * 1024};
         std::vector<std::pair<std::string, int>> rate_limits{};
         std::vector<std::string> blacklisted_ips{};
@@ -138,6 +139,7 @@ namespace _limhamn_http_server_impl {
     static bool enable_session{true};
     static std::string session_dir{"./sessions"};
     static std::string session_cookie_name{"session_id"};
+    static std::vector<std::string> associated_session_cookies{};
     static int64_t max_request_size{1024 * 1024 * 1024};
     static int default_rate_limit{100};
     static std::vector<std::pair<std::string, int>> rate_limited_endpoints{};
@@ -460,11 +462,36 @@ namespace _limhamn_http_server_impl {
                         }
                     }
 
+                    bool erase_associated = false;
                     if (session_id_found) {
                         session_id.erase(std::remove(session_id.begin(), session_id.end(), '/'), session_id.end());
                         std::filesystem::path session_file = session_dir + "/session_" + session_id + ".txt";
-                        request.session = read_from_session_file(session_file);
-                        request.session_id = session_id;
+                        if (!std::filesystem::exists(session_file)) {
+                            erase_associated = true;
+                            // remove associated session cookies and session cookie from request
+                            for (const auto& it : associated_session_cookies) {
+                                request.cookies.erase(
+                                    std::remove_if(request.cookies.begin(), request.cookies.end(),
+                                                   [&it](const limhamn::http::server::cookie& cookie) {
+                                                       return cookie.name == it;
+                                                   }),
+                                    request.cookies.end()
+                                );
+                            }
+                            request.cookies.erase(
+                                std::remove_if(request.cookies.begin(), request.cookies.end(),
+                                               [this](const limhamn::http::server::cookie& cookie) {
+                                                   return cookie.name == session_cookie_name;
+                                               }),
+                                request.cookies.end()
+                            );
+
+                            request.session.clear();
+                            request.session_id.clear();
+                        } else {
+                            request.session = read_from_session_file(session_file);
+                            request.session_id = session_id;
+                        }
                     }
 
                     limhamn::http::server::response response = generate_response_from_endpoint(request);
@@ -520,6 +547,12 @@ namespace _limhamn_http_server_impl {
                         }
 
                         net_response.insert(boost::beast::http::field::set_cookie, cookie_str);
+                    }
+
+                    if (erase_associated) {
+                        for (const auto& it : associated_session_cookies) {
+                            response.delete_cookies.push_back(it);
+                        }
                     }
 
                     for (const auto& it : response.delete_cookies) {
@@ -638,6 +671,7 @@ inline limhamn::http::server::server::server(const server_settings& settings, co
     _limhamn_http_server_impl::session_dir = settings.session_directory;
     _limhamn_http_server_impl::enable_session = settings.enable_session;
     _limhamn_http_server_impl::session_cookie_name = settings.session_cookie_name;
+    _limhamn_http_server_impl::associated_session_cookies = settings.associated_session_cookies;
     _limhamn_http_server_impl::max_request_size = settings.max_request_size;
     _limhamn_http_server_impl::rate_limited_endpoints = settings.rate_limits;
     _limhamn_http_server_impl::default_rate_limit = settings.default_rate_limit;
