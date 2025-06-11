@@ -41,6 +41,7 @@ namespace limhamn::http::server {
         std::string same_site{"Strict"};
         std::vector<std::string> attributes{};
         bool http_only{false};
+        bool secure{false};
         std::unordered_map<std::string, std::string> extra_attributes{};
     };
 
@@ -75,6 +76,7 @@ namespace limhamn::http::server {
         std::vector<std::string> whitelisted_ips{"127.0.0.1"};
         int default_rate_limit{100};
         bool trust_x_forwarded_for{false};
+        bool session_is_secure{false};
     };
 
     /**
@@ -148,6 +150,7 @@ namespace _limhamn_http_server_impl {
     using RateLimitTracker = std::unordered_map<std::string, std::tuple<std::string, int64_t, int64_t>>;
     static RateLimitTracker rate_limit_tracker;
     static bool trust_x_forwarded_for{false};
+    static bool session_is_secure{false};
 
     inline std::string convert_unix_millis_to_gmt(const int64_t unix_millis) {
         if (unix_millis == -1) {
@@ -507,7 +510,7 @@ namespace _limhamn_http_server_impl {
                         }
 
                         if (!session_id_found) {
-                            response.cookies.push_back({session_cookie_name, session_id, 0, "/", .same_site = "Strict", .http_only = true});
+                            response.cookies.push_back({session_cookie_name, session_id, 0, "/", .same_site = "Strict", .http_only = true, .secure = session_is_secure});
                         }
                     } else if (enable_session) {
                         std::string session_file = session_dir + "/session_" + session_id + ".txt";
@@ -530,13 +533,16 @@ namespace _limhamn_http_server_impl {
                         if (it.http_only) {
                             cookie_str += "HttpOnly; ";
                         }
+                        if (it.secure) {
+                            cookie_str += "Secure; ";
+                        }
                         if (!it.path.empty()) {
                             cookie_str += "Path=" + it.path + "; ";
                         }
                         if (!it.domain.empty()) {
                             cookie_str += "Domain=" + it.domain + "; ";
                         }
-                        if (!it.same_site.empty() && (it.same_site == "Strict" || it.same_site == "Lax")) {
+                        if (!it.same_site.empty() && (it.same_site == "Strict" || it.same_site == "Lax" || it.same_site == "None")) {
                             cookie_str += "SameSite=" + it.same_site + "; ";
                         }
                         for (const auto& attribute : it.attributes) {
