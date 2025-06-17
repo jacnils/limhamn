@@ -676,7 +676,7 @@ inline bool limhamn::database::postgresql_database::exec(const std::string& quer
         throw std::runtime_error{"Connection to database failed: " + std::string(PQerrorMessage(pg_conn))};
     }
 
-    if (!this->validate(query)) {
+    if (!this->validate(query) || query.empty() || query.back() != ';') {
         throw std::runtime_error{"Invalid SQL statement in database '" + this->database + "': " + query + "\n"};
     }
 
@@ -715,6 +715,10 @@ inline std::vector<std::unordered_map<std::string, std::string>> limhamn::databa
     if (!this->validate(query)) {
         throw std::runtime_error{"Invalid SQL statement: " + query + "\n"};
     }
+
+    if (query.back() != ';') {
+		throw std::runtime_error{"Query must end with a semicolon: " + query + "\n"};
+	}
 
     PGresult* res = PQexec(pg_conn, query.c_str());
 
@@ -817,6 +821,10 @@ inline bool limhamn::database::postgresql_database::exec(const std::string& quer
         }
     }
 
+    if (nq.back() != ';') {
+		nq += ';';
+	}
+
     std::vector<std::string> str{remove_non_utf8(to_string(args))...};
     std::vector<const char*> param_v{};
     param_v.reserve(str.size());
@@ -853,6 +861,10 @@ inline std::vector<std::unordered_map<std::string, std::string>> limhamn::databa
             nq += ch;
         }
     }
+
+    if (nq.back() != ';') {
+        nq += ';';
+	}
 
     std::vector<std::string> str{to_string(args)...};
     std::vector<const char*> param_v{};
