@@ -387,7 +387,10 @@ inline void limhamn::database::sqlite3_database::bind_parameters(sqlite3_stmt* s
 }
 
 
-inline void limhamn::database::sqlite3_database::bind_parameters(sqlite3_stmt* stmt, int index) {}
+inline void limhamn::database::sqlite3_database::bind_parameters(sqlite3_stmt* stmt, int index) {
+    static_cast<void>(stmt);
+    static_cast<void>(index);
+}
 inline void limhamn::database::sqlite3_database::bind_parameter(sqlite3_stmt* stmt, int index, int value) {
 #ifdef SDB_ENABLE_PRINTDEBUG
     std::cerr << "Binding int: " << value << " to index: " << index << "\n";
@@ -658,6 +661,7 @@ inline void limhamn::database::postgresql_database::open(const std::string& host
     }
 
     PQsetNoticeProcessor(pg_conn, [](void*, const char* message) {
+        static_cast<void>(message);
     }, nullptr);
 
     this->is_good = true;

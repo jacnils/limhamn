@@ -119,7 +119,6 @@ namespace limhamn::http::server {
      * @brief  Class that represents a server.
      */
     class server {
-        int port{8080};
     public:
         /**
          * @brief  Constructor for the server class
@@ -329,8 +328,6 @@ namespace _limhamn_http_server_impl {
                     }
                 }
 
-                c:
-
                 boost::beast::http::async_read(
                     net_socket,
                     net_buffer,
@@ -483,7 +480,7 @@ namespace _limhamn_http_server_impl {
                             }
                             request.cookies.erase(
                                 std::remove_if(request.cookies.begin(), request.cookies.end(),
-                                               [this](const limhamn::http::server::cookie& cookie) {
+                                               [](const limhamn::http::server::cookie& cookie) {
                                                    return cookie.name == session_cookie_name;
                                                }),
                                 request.cookies.end()
